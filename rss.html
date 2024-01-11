@@ -10,8 +10,10 @@
         constructor() {
           this.nzbUrl = window.localStorage.getItem("nzbUrl");
           this.gqlUrl = window.localStorage.getItem("gqlUrl");
+          this.debug = true;
         }
         #processItem(jsonItem) {
+          if (this.debug) console.log(jsonItem);
           let item = {"link": jsonItem.link, "name": jsonItem.title};
           let match = RSSAgg.NAME_RE.exec(jsonItem.title.replaceAll('.', ' '));
           if (match) Object.assign(item, match.groups);
@@ -48,6 +50,7 @@
         <td><button class="sort" data-sort="site">Site</button></td>
         <td><button class="sort" data-sort="episode">Occurence</button></td>
         <td><button class="sort" data-sort="title">Title</button></td>
+        <td><button class="sort" data-sort="name">Name</button></td>
       </tr>
       <tbody class="list">
         <tr>
