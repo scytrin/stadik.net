@@ -5,7 +5,7 @@
       class RSSAgg {
         static DEFAULT_NZB_URL = '?t=search&cat=6000&o=json';
         static DECORS = 'https://cors-anywhere.herokuapp.com/';
-        static NAME_RE = /(?<site>\w+)\W(?:(?<year>\d{2,4})(?:\W(?<month>\d{2})\W(?<day>\d{2}))?|[Ee](?<episode>\d+))\W(?<title>.+)\WXXX/;
+        static NAME_RE = /(?<site>\w+)\W(?<episode>[Ee]\d+|(?<year>\d{2,4})(?:\W(?<month>\d{2})\W(?<day>\d{2}))?)\W(?<title>.+)\WXXX/;
         sceneEvals = [["1080p", "HEVC"], ["720p", "HEVC"], ["1080p"], ["720p"]];
         constructor() {
           this.nzbUrl = window.localStorage.getItem("nzbUrl");
@@ -42,7 +42,11 @@
   </head>
   <body>
     <table id='items'>
-      
+      <tr id='item'>
+        <td class='site'></td>
+        <td class='episode'></td>
+        <td><a href='' class='title'></a></td>
+      </tr>
     </table>
     <script type='text/javascript'>
       var itemList;
@@ -50,7 +54,8 @@
       var feed = app.consumeFeed();
       feed.then(items => {
         itemList = new List('#items', {
-          valueNames: [],
+          item: 'item',
+          valueNames: ['link','name','site','episode','title'],
         }, items);
       });
     </script>
