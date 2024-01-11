@@ -5,7 +5,6 @@
     <script src="https://ajax.googleapis.com/ajax/libs/listjs/2.3.1/list.min.js"></script>
     <script type='text/javascript'>
       class RSSAgg {
-        static DEFAULT_NZB_URL = '?t=search&cat=6000&o=json';
         static DECORS = 'https://cors-anywhere.herokuapp.com/';
         static NAME_RE = /(?<site>\w+)\W(?<episode>[Ee]\d+|(?<year>\d{2,4})(?:\W(?<month>\d{2})\W(?<day>\d{2}))?)\W(?<title>.+)\WXXX/;
         sceneEvals = [["1080p", "HEVC"], ["720p", "HEVC"], ["1080p"], ["720p"]];
@@ -44,40 +43,12 @@
       var feed = app.consumeFeed();
     </script>
   </head>
-  <body>
-    <div id='rss_agg'>
-      <input id='nzbUrl'  />
-      <input class="search" placeholder="Search" />
-      <table>
-        <tr>
-          <td><button class="sort" data-sort="site">Site</button></td>
-          <td><button class="sort" data-sort="episode">Occurence</button></td>
-          <td><button class="sort" data-sort="title">Title</button></td>
-          <td><button class="sort" data-sort="name">Name</button></td>
-        </tr>
-        <tbody class="list">
-          <tr>
-            <td class='site'></td>
-            <td class='episode'></td>
-            <td class='title'></td>
-            <td><a href='' class='link name'></a></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    
+  <body>    
     <div id="example-table"></div>
-
     <script type='text/javascript'>
-      var itemList =  new List('rss_agg', {valueNames: [
-        { attr: 'href', name: 'link' },
-        'name',
-        'site',
-        'episode',
-        'title',
-      ]});
-
       var table = new Tabulator("#example-table", {
+        index: "link",
+        data: await feed,
         dataTree: true,
         dataTreeFilter: false,
         dataTreeSort: false,
@@ -88,11 +59,6 @@
       	 	{title:"Name", field:"name", width: 150},
        	],
       });
-      
-      feed.then(items => items.forEach(e=>{
-        console.log(e);
-        itemList.add(e);
-      }));
     </script>
   </body>
 </html>
