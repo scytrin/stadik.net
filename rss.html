@@ -5,10 +5,8 @@
   </head>
   <body>    
     <div id="example-table"></div>
-    <script type='text/javascript'>
-      const NAME_RE = /(?<site>\w+)\W(?<episode>[Ee]\d+|(?<year>\d{2,4})(?:\W(?<month>\d{2})\W(?<day>\d{2}))?)\W(?<title>.+)\WXXX/;
-      let sceneEvals = [["1080p", "HEVC"], ["720p", "HEVC"], ["1080p"], ["720p"]];
-      
+    <script type='text/javascript'>      
+      const NAME_RE = /(?<site>[A-Za-z0-9_-]+)\W(?<episode>[Ee]\d+|(?<year>\d{2,4})(?:\W(?<month>\d{2})\W(?<day>\d{2}))?)\W(?<title>.+)\WXXX/;
       function processJsonItem(jsonItem) {
         let item = {"link": jsonItem.link, "name": jsonItem.title, "pub": jsonItem.pubDate};
         let match = NAME_RE.exec(jsonItem.title.replaceAll('.', ' '));
@@ -21,7 +19,7 @@
         pageUrl.searchParams.set('limit', pageUrl.searchParams.get('limit') || 100);
         pageUrl.searchParams.set('offset', pageUrl.searchParams.get('limit') * pageNum);
         pageUrl.searchParams.set('o', 'json');
-        return fetch(DECORS + pageUrl).then(response => response.json())
+        return fetch(pageUrl).then(response => response.json())
           .then(json => json.channel.item.map(jsonItem => processJsonItem(jsonItem)));
       }
       
@@ -29,19 +27,25 @@
         return Promise.all([...Array(pages || 1).keys()].map(i=>getNzbPage(i))).then(all=>all.flat());
       }
       
-      function betterScene(sceneA, sceneB) {
-        let a = sceneEvals.findIndex(e=>e.all(t=>sceneA.name.includes(t)));
-        let b = sceneEvals.findIndex(e=>e.all(t=>sceneB.name.includes(t)));
-        if (a > b) return [b, a];
+      let sceneEvals = [["1080p", "HEVC"], ["720p", "HEVC"], ["1080p"], ["720p"]];
+      function sceneScore(scene) { return sceneEvals.findIndex(e=>e.all(t=>scene.name.includes(t))); }
+      function sceneIsSorted(a, b) {
+        if (sceneScore(a) > sceneScore(b)) return [b, a];
         return [a, b];
       }
       
+      let feed = consumeFeed(1);
       var table = new Tabulator("#example-table", {
         index: "link",
+        data: await feed,
+        pagination: true,
+        groupBy: d => `${d.title} (${d.site} ${d.episode})`,
+        groupStartOpen: false,
         dataTree: true,
         dataTreeFilter: false,
         dataTreeSort: false,
-       	columns:[ //Define Table Columns
+        layout: "fitDataStretch",
+       	columns:[
       	 	{title:"Site", field:"site", hozAlign:"left"},
       	 	{title:"@", field:"episode", sorter:"date", hozAlign:"center"},
       	 	{title:"Title", field:"title"},
