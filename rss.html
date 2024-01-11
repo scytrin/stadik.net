@@ -5,7 +5,8 @@
   </head>
   <body>    
     <div id="rss-agg-table"></div>
-    <script type='text/javascript'>      
+    <script type='text/javascript'>
+      const DECORS = 'https://cors-anywhere.herokuapp.com/'
       const NAME_RE = /(?<site>[A-Za-z0-9_-]+)\W(?<episode>[Ee]\d+|(?<year>\d{2,4})(?:\W(?<month>\d{2})\W(?<day>\d{2}))?)\W(?<title>.+)\WXXX/;
       let sceneEvals = [
         ["1080p", "HEVC"],
@@ -13,41 +14,20 @@
         ["1080p"],
         ["720p"],
       ];
-      function newsnabAjaxResponse(url, params, response) {
-        return {"last_page": 3, "data": response.channel.item.map((jsonItem) => {
-          let score = sceneEvals.findIndex(e => e.every(t => jsonItem.title.includes(t)));
-          if (score < 0) score = 100;
-          let item = { "link": jsonItem.link, "name": jsonItem.title, "pubDate": jsonItem.pubDate, "score": score};
-          let match = NAME_RE.exec(jsonItem.title.replaceAll('.', ' '));
-          if (match) Object.assign(item, match.groups);
-          return item;
-        })};
-      }
-      function newsnabAjaxURLGenerator(url, config, params) {
-        let pageUrl = new URL(url);
-        if (params.t) pageUrl.searchParams.set('t', params.t);
-        if (params.o) pageUrl.searchParams.set('o', params.o);
-        if (params.cat) pageUrl.searchParams.set('cat', params.cat);
-        if (params.apikey) pageUrl.searchParams.set('apikey', params.apikey);
-        if (!params.size) params.size = 100;
-        if (!params.page) params.page = 0;
-        pageUrl.searchParams.set('limit', params.size);
-        pageUrl.searchParams.set('offset', params.size * params.page);
-        return pageUrl;
-      }
+      
       var table = new Tabulator("#rss-agg-table", {
         index: "link",
        	columns: [
       	 	{title:"Site", field:"site", visible: false},
       	 	{title:"Episode", field:"episode", visible: false},
       	 	{title:"Title", field:"title", visible: false},
-      	 	{title:"Score", field:"score", visible: true},
       	 	{title:"Published", field:"pubDate", visible: false},
+      	 	{title:"Score", field:"score", visible: true},
       	 	{title:"Name", field:"name", formatter: "link", formatterParams: {labelField: "name", urlField:"link", download: true}},
         ],
         initialFilter:[
           {field:"score", type:">=", value:"0"},
-          {field:"title", type:"!=", value:""}
+          {field:"title", type:"!=", value:"undefined"}
         ],
         initialSort: [
           {column:"score", dir:"asc"},
@@ -58,15 +38,43 @@
         layout: "fitDataStretch",
         layoutColumnsOnNewData: true,
         groupBy: d => `${d.title} (${d.site} ${d.episode})`,
-        groupStartOpen: false,
+        // groupStartOpen: false,
         groupToggleElement: "header",
-        // https://tabulator.info/docs/5.5/data#ajax-progressive
         progressiveLoad: "load",        
-        // https://tabulator.info/docs/5.5/data#ajax-cors
         ajaxURL: window.localStorage.getItem("nzbUrl"),
         ajaxParams: { 't': 'search', 'o': 'json', 'cat': 6040 },
-        ajaxURLGenerator: newsnabAjaxURLGenerator,
-        ajaxResponse: newsnabAjaxResponse,
+        ajaxURLGenerator: function(url, config, params) {
+          let pageUrl = new URL(url);
+          if (params.t) pageUrl.searchParams.set('t', params.t);
+          if (params.o) pageUrl.searchParams.set('o', params.o);
+          if (params.cat) pageUrl.searchParams.set('cat', params.cat);
+          if (params.apikey) pageUrl.searchParams.set('apikey', params.apikey);
+          if (!params.size) params.size = 100;
+          if (!params.page) params.page = 0;
+          pageUrl.searchParams.set('limit', params.size);
+          pageUrl.searchParams.set('offset', params.size * params.page);
+          return pageUrl;
+        },
+        ajaxResponse: function(url, params, response) {
+          return {"last_page": 1, "data": response.channel.item.map((jsonItem) => {
+            let item = {
+              "link": jsonItem.link.replaceAll('&amp;','&'),
+              "name": jsonItem.title,
+              "pubDate": jsonItem.pubDate,
+              "score": Math.min(0, (100*sceneEvals.findIndex(e => e.every(t => jsonItem.title.includes(t))))/sceneEvals.length),
+            };
+            let match = NAME_RE.exec(jsonItem.title.replaceAll('.', ' '));
+            if (match) Object.assign(item, match.groups);
+            return item;
+          })};
+        },
+      });
+      table.on("tableBuilt", function(){
+        table.setSort([
+          {column:"score", dir:"asc"},
+          {column:"name", dir:"asc"},
+          {column:"pubDate", dir:"asc"},
+        ]);
       });
     </script>
   </body>
