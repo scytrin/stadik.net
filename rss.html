@@ -13,68 +13,60 @@
         ["1080p"],
         ["720p"],
       ];
+      function newsnabAjaxResponse(url, params, response) {
+        return {"last_page": 3, "data": response.channel.item.map((jsonItem) => {
+          let score = sceneEvals.findIndex(e => e.every(t => jsonItem.title.includes(t)));
+          if (score < 0) score = 100;
+          let item = { "link": jsonItem.link, "name": jsonItem.title, "pubDate": jsonItem.pubDate, "score": score};
+          let match = NAME_RE.exec(jsonItem.title.replaceAll('.', ' '));
+          if (match) Object.assign(item, match.groups);
+          return item;
+        })};
+      }
+      function newsnabAjaxURLGenerator(url, config, params) {
+        let pageUrl = new URL(url);
+        if (params.t) pageUrl.searchParams.set('t', params.t);
+        if (params.o) pageUrl.searchParams.set('o', params.o);
+        if (params.cat) pageUrl.searchParams.set('cat', params.cat);
+        if (params.apikey) pageUrl.searchParams.set('apikey', params.apikey);
+        if (!params.size) params.size = 100;
+        if (!params.page) params.page = 0;
+        pageUrl.searchParams.set('limit', params.size);
+        pageUrl.searchParams.set('offset', params.size * params.page);
+        return pageUrl;
+      }
       var table = new Tabulator("#rss-agg-table", {
         index: "link",
        	columns: [
-      	 	{title:"Site", field:"site", hozAlign:"left"},
-      	 	{title:"@", field:"episode", sorter:"date", hozAlign:"center"},
-      	 	{title:"Title", field:"title"},
-      	 	{title:"Score", field:"score"},
-      	 	{title:"Name", field:"name", width: 150},
+      	 	{title:"Site", field:"site", visible: false},
+      	 	{title:"Episode", field:"episode", visible: false},
+      	 	{title:"Title", field:"title", visible: false},
+      	 	{title:"Score", field:"score", visible: true},
+      	 	{title:"Published", field:"pubDate", visible: false},
+      	 	{title:"Name", field:"name", formatter: "link", formatterParams: {labelField: "name", urlField:"link", download: true}},
+        ],
+        initialFilter:[
+          {field:"score", type:">=", value:"0"},
+          {field:"title", type:"!=", value:""}
         ],
         initialSort: [
+          {column:"score", dir:"asc"},
           {column:"name", dir:"asc"},
-          {column:"score", dir:"desc"},
           {column:"pubDate", dir:"asc"},
         ],
+        headerVisible: false,
         layout: "fitDataStretch",
-        // dataTree: true,
-        // dataTreeFilter: false,
-        // dataTreeSort: false,
+        layoutColumnsOnNewData: true,
         groupBy: d => `${d.title} (${d.site} ${d.episode})`,
         groupStartOpen: false,
         groupToggleElement: "header",
-        // groupHeader: function(value, count, data, group) {
-        //     //value - the value all members of this group share
-        //     //count - the number of rows in this group
-        //     //data - an array of all the row data objects in this group
-        //     //group - the group component for the group
-
-        //     // this is where we check for sceneScore and if we have == 0 and say yay
-        //     console.log([value, count, data, group]);
-        //     return value + "<span style='color:#d00; margin-left:10px;'>(" + count + " item) " + Math.min(...((data || []).map(sceneScore))) + "</span>";
-        // },
         // https://tabulator.info/docs/5.5/data#ajax-progressive
         progressiveLoad: "load",        
         // https://tabulator.info/docs/5.5/data#ajax-cors
         ajaxURL: window.localStorage.getItem("nzbUrl"),
-        ajaxParams: { 't': 'search', 'o': 'json', 'cat': 6000 },
-        // https://tabulator.info/docs/5.5/page#remote-url
-        ajaxURLGenerator: function(url, config, params) {
-          let pageUrl = new URL(url);
-          if (params.t) pageUrl.searchParams.set('t', params.t);
-          if (params.o) pageUrl.searchParams.set('o', params.o);
-          if (params.cat) pageUrl.searchParams.set('cat', params.cat);
-          if (params.apikey) pageUrl.searchParams.set('apikey', params.apikey);
-          if (!params.size) params.size = 100;
-          if (!params.page) params.page = 0;
-          pageUrl.searchParams.set('limit', params.size);
-          pageUrl.searchParams.set('offset', params.size * params.page);
-          return pageUrl;
-        },
-        ajaxResponse: function(url, params, response) {
-          return {"last_page": 1, "data": response.channel.item.map((jsonItem) => {
-            let item = {
-              "link": jsonItem.link,
-              "name": jsonItem.title,
-              "pubDate": jsonItem.pubDate,
-              "score": sceneEvals.findIndex(e => e.every(t => jsonItem.title.includes(t))),
-            };
-            let match = NAME_RE.exec(jsonItem.title.replaceAll('.', ' '));
-            if (match) Object.assign(item, match.groups);
-            return item;
-          })};
-        },
+        ajaxParams: { 't': 'search', 'o': 'json', 'cat': 6040 },
+        ajaxURLGenerator: newsnabAjaxURLGenerator,
+        ajaxResponse: newsnabAjaxResponse,
       });
     </script>
   </body>
