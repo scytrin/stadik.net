@@ -40,14 +40,10 @@
       // let feed2 = app2.consumeFeed();
     </script>
   </head>
-  <body>
-    <table id='items' class='list'>
-      <td colspan=3>
-  <input class="search" placeholder="Search" />
-  <button class="sort" data-sort="name">
-    Sort by name
-  </button>
-      </td>
+  <body id='rss_agg'>
+    <input class="search" placeholder="Search" />
+    <button class="sort" data-sort="name">Sort by name</button>
+    <table>
       <tbody class="list">
         <tr>
           <td class='site'></td>
@@ -59,8 +55,7 @@
     <script type='text/javascript'>
       var app = new RSSAgg();
       var feed = app.consumeFeed();
-      var itemList =  new List('#items', {
-        item: 'item',
+      var itemList =  new List('rss_agg', {
         valueNames: ['link','name','site','episode','title'],
       });
       feed.then(items => items.forEach(e=>{
