@@ -2,8 +2,8 @@
   <head>
     <script src="https://ajax.googleapis.com/ajax/libs/listjs/2.3.1/list.min.js"></script>
     <script type='text/javascript'>
-// item = {}
-var app = {
+      const DECORS = 'https://cors-anywhere.herokuapp.com/';
+const app = {
   init: function() {
     this.nzbUrl ||= 'https://api.nzbgeek.info/api';
     this.gqlUrl ||= 'https://stashdb.org/graphql';
@@ -29,25 +29,29 @@ var app = {
     ["1080p"],
     ["720p"],
   ],
+
+  getPage: function(pageNum) {
+    return fetch(DECORS + this.nzbFeed + `&offset=${pageNum * this.perPage}`)
+      .then(response => response.json()
+        .then(json => json.channel.item.map(e => {
+          let item = {"link": e.link, "name": e.title};
+          let match = this.titleRE.exec(e.title.replaceAll('.',' '));
+          if (match) item["match"] = {
+            "site": match[1],
+            "year": match[2],
+            "month": match[3],
+            "day": match[4],
+            "episode": match[5],
+            "title": match[6],
+          };
+          return item;
+        })));
+  },
   
   consumeFeed: async function(pages) {
-    var found = new Set();
-    for (var i = 0; i < (pages || 1); i++) {
-      await fetch(app.nzbFeed+`&offset=${this.perPage*i}`).then(r=>r.json()).then(json=>json.channel.item.forEach(e => {
-        let item = {"link": e.link, "name": e.title};
-        let match = this.titleRE.exec(e.name.replaceAll('.',' '));
-        if (match) item["match"] = {
-          "site": match[1],
-          "year": match[2],
-          "month": match[3],
-          "day": match[4],
-          "episode": match[5],
-          "title": match[6],
-        };
-        found.add(item);
-      }));
-    }
-    return found;
+    return Promise
+      .all([...Array(pages || 1).keys()].map(i=>this.getPage(i)))
+      .then(all=>all.flat());
   },
   
   byScene: function(found) {
@@ -83,16 +87,15 @@ var app = {
     }
   },
 };
-
-var feed = await app.consumeFeed();
-var bs = app.byScene(feed);
-var bss = app.bySceneSite(feed);
     </script>
   </head>
   <body>
     <table id='items'></table>
     <script type='text/javascript'>
-      var items = new List('items', {}, feed);
+      var feed = await app.consumeFeed();
+      var bs = app.byScene(feed);
+      var bss = app.bySceneSite(feed);
+      var items = new List('#items', {}, feed);
     </script>
   </body>
 </html>
