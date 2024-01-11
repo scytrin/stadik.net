@@ -2,102 +2,56 @@
   <head>
     <script src="https://ajax.googleapis.com/ajax/libs/listjs/2.3.1/list.min.js"></script>
     <script type='text/javascript'>
-      const DECORS = 'https://cors-anywhere.herokuapp.com/';
-const app = {
-  init: function() {
-    this.nzbUrl ||= 'https://api.nzbgeek.info/api';
-    this.gqlUrl ||= 'https://stashdb.org/graphql';
-  },
-  
-  get gqlUrl() { return window.localStorage.getItem("gqlUrl"); },
-  set gqlUrl(v) { window.localStorage.setItem("gqlUrl", v); },
-  get gqlKey() { return window.localStorage.getItem("gqlKey"); },
-  set gqlKey(v) { window.localStorage.setItem("gqlKey", v); },
-  
-  get nzbUrl() { return window.localStorage.getItem("nzbUrl"); },
-  set nzbUrl(v) { window.localStorage.setItem("nzbUrl", v); },
-  get nzbKey() { return window.localStorage.getItem("nzbKey"); },
-  set nzbKey(v) { window.localStorage.setItem("nzbKey", v); },
-  
-  get nzbFeed() { return `${this.nzbUrl}?t=search&cat=6000&limit=${this.perPage}&o=json&apikey=${this.nzbKey}`; },
-  
-  perPage: 200,
-  titleRE: /(\w+)\W(?:(\d{2,4})(?:\W(\d{2})\W(\d{2}))?|[Ee](\d+))\W(.+)\WXXX/,
-  sceneEvals: [
-    ["1080p", "HEVC"],
-    ["720p", "HEVC"],
-    ["1080p"],
-    ["720p"],
-  ],
-
-  getPage: function(pageNum) {
-    return fetch(DECORS + this.nzbFeed + `&offset=${pageNum * this.perPage}`)
-      .then(response => response.json()
-        .then(json => json.channel.item.map(e => {
-          let item = {"link": e.link, "name": e.title};
-          let match = this.titleRE.exec(e.title.replaceAll('.',' '));
-          if (match) item["match"] = {
-            "site": match[1],
-            "year": match[2],
-            "month": match[3],
-            "day": match[4],
-            "episode": match[5],
-            "title": match[6],
-          };
+      class RSSAgg {
+        static DEFAULT_NZB_URL = '?t=search&cat=6000&o=json';
+        static DECORS = 'https://cors-anywhere.herokuapp.com/';
+        static NAME_RE = /(?<site>\w+)\W(?:(?<year>\d{2,4})(?:\W(?<month>\d{2})\W(?<day>\d{2}))?|[Ee](?<episode>\d+))\W(?<title>.+)\WXXX/;
+        sceneEvals = [["1080p", "HEVC"], ["720p", "HEVC"], ["1080p"], ["720p"]];
+        constructor() {
+          this.nzbUrl = window.localStorage.getItem("nzbUrl");
+          this.gqlUrl = window.localStorage.getItem("gqlUrl");
+        }
+        #processItem(jsonItem) {
+          let item = {"link": jsonItem.link, "name": jsonItem.title};
+          let match = RSSAgg.NAME_RE.exec(jsonItem.title.replaceAll('.', ' '));
+          if (match) Object.assign(item, match.groups);
           return item;
-        })));
-  },
-  
-  consumeFeed: async function(pages) {
-    return Promise
-      .all([...Array(pages || 1).keys()].map(i=>this.getPage(i)))
-      .then(all=>all.flat());
-  },
-  
-  byScene: function(found) {
-    var scenes = new Map();
-    found.forEach(e=>{
-      var scene = scenes.get(e.match.title);
-      if (scene == null) scene = new Array();
-      scene.push(e)
-      scenes.set(e.match.title, scene);
-    });
-    return scenes;
-  },
-  
-  bySceneSite: function(found) {
-    var sites = new Map();
-    found.forEach(e => {
-      if (e.match == null) return;
-      var site = sites.get(e.match.site);
-      if (site == null) site = new Map();
-      var scene = site.get(e.match.title);
-      if (scene == null) scene = new Array();
-      scene.push(e)
-      site.set(e.match.title, scene);
-      sites.set(e.match.site, site);
-    });
-    return sites;
-  },
-  
-  bestScene: function(scenes) {
-    for (const substrs of this.sceneEvals) {
-      var good = scenes.filter(s=>substrs.every(e=>s[1].match(e)));
-      if (good.length > 0) return good[0];
-    }
-  },
-};
+        }
+        #getPage(pageNum) {
+          let pageUrl = new URL(this.nzbUrl);
+          pageUrl.searchParams.set('limit', pageUrl.searchParams.get('limit') || 100);
+          pageUrl.searchParams.set('offset', pageUrl.searchParams.get('limit') * pageNum);
+          pageUrl.searchParams.set('o', 'json');
+          return fetch(DECORS + pageUrl).then(response => response.json())
+            .then(json => json.channel.item.map(jsonItem => this.#processItem(jsonItem)));
+        }
+        consumeFeed(pages) {
+          let pageRequests = [...Array(pages || 1).keys()].map(i=>this.#getPage(i));
+          return Promise.all(pageRequests).then(all=>all.flat());
+        }
+        betterScene(sceneA, sceneB) {
+          let a = sceneEvals.findIndex(e=>e.all(t=>sceneA.name.includes(t)));
+          let b = sceneEvals.findIndex(e=>e.all(t=>sceneB.name.includes(t)));
+          if (a > b) return [b, a];
+          return [a, b];
+        }
+      }
+      // let app2 = new RSSAgg();
+      // let feed2 = app2.consumeFeed();
     </script>
   </head>
   <body>
-    <table id='items'></table>
+    <table id='items'>
+      
+    </table>
     <script type='text/javascript'>
       var itemList;
+      var app = new RSSAgg();
       var feed = app.consumeFeed();
       feed.then(items => {
-        window.bs = app.byScene(items);
-        window.bss = app.bySceneSite(items);
-        itemList = new List('#items', {}, items);
+        itemList = new List('#items', {
+          valueNames: [],
+        }, items);
       });
     </script>
   </body>
