@@ -22,7 +22,7 @@
           pageUrl.searchParams.set('limit', pageUrl.searchParams.get('limit') || 100);
           pageUrl.searchParams.set('offset', pageUrl.searchParams.get('limit') * pageNum);
           pageUrl.searchParams.set('o', 'json');
-          return fetch(DECORS + pageUrl).then(response => response.json())
+          return fetch(RSSAgg.DECORS + pageUrl).then(response => response.json())
             .then(json => json.channel.item.map(jsonItem => this.#processItem(jsonItem)));
         }
         consumeFeed(pages) {
