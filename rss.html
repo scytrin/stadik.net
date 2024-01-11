@@ -1,0 +1,98 @@
+<html>
+  <head>
+    <script src="https://ajax.googleapis.com/ajax/libs/listjs/2.3.1/list.min.js"></script>
+    <script type='text/javascript'>
+// item = {}
+var app = {
+  init: function() {
+    this.nzbUrl ||= 'https://api.nzbgeek.info/api';
+    this.gqlUrl ||= 'https://stashdb.org/graphql';
+  },
+  
+  get gqlUrl() { return window.localStorage.getItem("gqlUrl"); },
+  set gqlUrl(v) { window.localStorage.setItem("gqlUrl", v); },
+  get gqlKey() { return window.localStorage.getItem("gqlKey"); },
+  set gqlKey(v) { window.localStorage.setItem("gqlKey", v); },
+  
+  get nzbUrl() { return window.localStorage.getItem("nzbUrl"); },
+  set nzbUrl(v) { window.localStorage.setItem("nzbUrl", v); },
+  get nzbKey() { return window.localStorage.getItem("nzbKey"); },
+  set nzbKey(v) { window.localStorage.setItem("nzbKey", v); },
+  
+  get nzbFeed() { return `${this.nzbUrl}?t=search&cat=6000&limit=${this.perPage}&o=json&apikey=${this.nzbKey}`; },
+  
+  perPage: 200,
+  titleRE: /(\w+)\W(?:(\d{2,4})(?:\W(\d{2})\W(\d{2}))?|[Ee](\d+))\W(.+)\WXXX/,
+  sceneEvals: [
+    ["1080p", "HEVC"],
+    ["720p", "HEVC"],
+    ["1080p"],
+    ["720p"],
+  ],
+  
+  consumeFeed: async function(pages) {
+    var found = new Set();
+    for (var i = 0; i < (pages || 1); i++) {
+      await fetch(app.nzbFeed+`&offset=${this.perPage*i}`).then(r=>r.json()).then(json=>json.channel.item.forEach(e => {
+        let item = {"link": e.link, "name": e.title};
+        let match = this.titleRE.exec(e.name.replaceAll('.',' '));
+        if (match) item["match"] = {
+          "site": match[1],
+          "year": match[2],
+          "month": match[3],
+          "day": match[4],
+          "episode": match[5],
+          "title": match[6],
+        };
+        found.add(item);
+      }));
+    }
+    return found;
+  },
+  
+  byScene: function(found) {
+    var scenes = new Map();
+    found.forEach(e=>{
+      var scene = scenes.get(e[2]);
+      if (scene == null) scene = new Array();
+      scene.push(e)
+      scenes.set(e[2], scene);
+    });
+    return scenes;
+  },
+  
+  bySceneSite: function(found) {
+    var sites = new Map();
+    found.forEach(e=>{
+      if (e.length < 3) return;
+      var site = sites.get(e[3]);
+      if (site == null) site = new Map();
+      var scene = site.get(e[2]);
+      if (scene == null) scene = new Array();
+      scene.push(e)
+      site.set(e[2], scene);
+      sites.set(e[3], site);
+    });
+    return sites;
+  },
+  
+  bestScene: function(scenes) {
+    for (const substrs of this.sceneEvals) {
+      var good = scenes.filter(s=>substrs.every(e=>s[1].match(e)));
+      if (good.length > 0) return good[0];
+    }
+  },
+};
+
+var feed = await app.consumeFeed();
+var bs = app.byScene(feed);
+var bss = app.bySceneSite(feed);
+    </script>
+  </head>
+  <body>
+    <table id='items'></table>
+    <script type='text/javascript'>
+      var items = new List('items', {}, feed);
+    </script>
+  </body>
+</html>
