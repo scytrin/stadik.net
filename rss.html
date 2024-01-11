@@ -42,8 +42,12 @@
   </head>
   <body id='rss_agg'>
     <input class="search" placeholder="Search" />
-    <button class="sort" data-sort="name">Sort by name</button>
     <table>
+      <tr>
+        <td><button class="sort" data-sort="name">Site</button></td>
+        <td><button class="sort" data-sort="episode">Occurence</button></td>
+        <td><button class="sort" data-sort="title">Title</button></td>
+      </tr>
       <tbody class="list">
         <tr>
           <td class='site'></td>
@@ -55,9 +59,13 @@
     <script type='text/javascript'>
       var app = new RSSAgg();
       var feed = app.consumeFeed();
-      var itemList =  new List('rss_agg', {
-        valueNames: ['link','name','site','episode','title'],
-      });
+      var itemList =  new List('rss_agg', {valueNames: [
+        { attr: 'href', name: 'link' },
+        'name',
+        'site',
+        'episode',
+        'title',
+      ]});
       feed.then(items => items.forEach(e=>{
         console.log(e);
         itemList.add(e);
