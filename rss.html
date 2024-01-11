@@ -37,10 +37,19 @@
       let feed = consumeFeed(1);
       var table = new Tabulator("#example-table", {
         index: "link",
-        data: await feed,
-        pagination: true,
         groupBy: d => `${d.title} (${d.site} ${d.episode})`,
         groupStartOpen: false,
+        groupToggleElement: "header",
+        groupHeader:function(value, count, data, group){
+            //value - the value all members of this group share
+            //count - the number of rows in this group
+            //data - an array of all the row data objects in this group
+            //group - the group component for the group
+
+            // this is where we check for sceneScore and if we have == 0 and say yay
+        
+            return value + "<span style='color:#d00; margin-left:10px;'>(" + count + " item)</span>";
+        },
         dataTree: true,
         dataTreeFilter: false,
         dataTreeSort: false,
@@ -52,6 +61,7 @@
       	 	{title:"Name", field:"name", width: 150},
        	],
       });
+      feed.then(items=>table.updateOrAddData(items));
     </script>
   </body>
 </html>
