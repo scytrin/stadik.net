@@ -57,25 +57,25 @@ const app = {
   byScene: function(found) {
     var scenes = new Map();
     found.forEach(e=>{
-      var scene = scenes.get(e[2]);
+      var scene = scenes.get(e.match.title);
       if (scene == null) scene = new Array();
       scene.push(e)
-      scenes.set(e[2], scene);
+      scenes.set(e.match.title, scene);
     });
     return scenes;
   },
   
   bySceneSite: function(found) {
     var sites = new Map();
-    found.forEach(e=>{
-      if (e.length < 3) return;
-      var site = sites.get(e[3]);
+    found.forEach(e => {
+      if (e.match == null) return;
+      var site = sites.get(e.match.site);
       if (site == null) site = new Map();
-      var scene = site.get(e[2]);
+      var scene = site.get(e.match.title);
       if (scene == null) scene = new Array();
       scene.push(e)
-      site.set(e[2], scene);
-      sites.set(e[3], site);
+      site.set(e.match.title, scene);
+      sites.set(e.match.site, site);
     });
     return sites;
   },
@@ -92,10 +92,13 @@ const app = {
   <body>
     <table id='items'></table>
     <script type='text/javascript'>
-      var feed = await app.consumeFeed();
-      var bs = app.byScene(feed);
-      var bss = app.bySceneSite(feed);
-      var items = new List('#items', {}, feed);
+      var itemList;
+      var feed = app.consumeFeed();
+      feed.then(items => {
+        window.bs = app.byScene(items);
+        window.bss = app.bySceneSite(items);
+        itemList = new List('#items', {}, items);
+      });
     </script>
   </body>
 </html>
