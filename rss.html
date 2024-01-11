@@ -42,22 +42,31 @@
   </head>
   <body>
     <table id='items' class='list'>
-      <tr id='item'>
-        <td class='site'></td>
-        <td class='episode'></td>
-        <td><a href='' class='title'></a></td>
-      </tr>
+      <td colspan=3>
+  <input class="search" placeholder="Search" />
+  <button class="sort" data-sort="name">
+    Sort by name
+  </button>
+      </td>
+      <tbody class="list">
+        <tr>
+          <td class='site'></td>
+          <td class='episode'></td>
+          <td><a href='' class='title'></a></td>
+        </tr>
+      </tbody>
     </table>
     <script type='text/javascript'>
-      var itemList;
       var app = new RSSAgg();
       var feed = app.consumeFeed();
-      feed.then(items => {
-        itemList = new List('#items', {
-          item: 'item',
-          valueNames: ['link','name','site','episode','title'],
-        }, items);
+      var itemList =  new List('#items', {
+        item: 'item',
+        valueNames: ['link','name','site','episode','title'],
       });
+      feed.then(items => items.forEach(e=>{
+        console.log(e);
+        itemList.add(e);
+      }));
     </script>
   </body>
 </html>
